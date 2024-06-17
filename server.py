@@ -1,15 +1,15 @@
 import socket
 import select
 
-LENGTH = 10
-HOST = ('localhost', 5000)
+HEADER_LENGTH = 10
+HOST = ('localhost', 10000)
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 server.bind(HOST)
 server.listen()
-print('che kavo')
+print('listening')
 
 sockets_list = [server]
 clients_list = {}
@@ -17,14 +17,14 @@ clients_list = {}
 
 def receive_msg(client: socket.socket):
     try:
-        msg_header = client.recv(LENGTH)
+        msg_header = client.recv(HEADER_LENGTH)
         if not len(msg_header):
             return False
 
         msg_length = int(msg_header.decode('UTF-8').strip())
         return {
             'header': msg_header,
-            'data': client.recv(msg_length).decode('UTF-8'),
+            'data': client.recv(msg_length),
         }
 
     except:
@@ -41,10 +41,12 @@ while True:
                 continue
             sockets_list.append(client)
             clients_list[client] = user
-            print(f'new connection from {client} with message {user["message"]}')
+            data = user['data']
+            print(f'new connection from {addr} with {data.decode("UTF-8")}')
 
         else:
             msg = receive_msg(client)
+            print(msg)
             if msg is False:
                 print(f'connection from {addr} has been interrupted')
                 sockets_list.remove(_socket)
@@ -55,7 +57,7 @@ while True:
 
             for client in clients_list:
                 if client is not _socket:
-                    client.send(f'new message from {user["data"]} if {msg["data"]}')
+                    client.send(user["header"]+user["data"]+msg["header"]+msg["data"])
 
         for _socket in es:
             sockets_list.remove(_socket)
